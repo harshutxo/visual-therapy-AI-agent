@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Therapist AI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 800px;
+            height: 90vh;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .header {
+            background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 1.8em;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 0.9em;
+        }
+
+        .disclaimer {
+            background: rgba(255, 193, 7, 0.1);
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 0;
+            font-size: 0.85em;
+            color: #856404;
+            display: none;
+        }
+
+        .disclaimer.show {
+            display: block;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 15px 20px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .message.user {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 5px;
+        }
+
+        .message.agent {
+            background: #f8f9fa;
+            color: #333;
+            align-self: flex-start;
+            border: 1px solid #e9ecef;
+            border-bottom-left-radius: 5px;
+        }
+
+        .message.crisis {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            color: #856404;
+        }
+
+        .message.system {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+            align-self: center;
+            font-style: italic;
+            max-width: 90%;
+        }
+
+        .exercise-container {
+            background: #e8f5e8;
+            border: 1px solid #28a745;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+
+        .exercise-title {
+            font-weight: bold;
+            color: #155724;
+            margin-bottom: 10px;
+        }
+
+        .exercise-steps {
+            line-height: 1.6;
+        }
+
+        .input-container {
+            padding: 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .input-wrapper {
+            flex: 1;
+            position: relative;
+        }
+
+        #userInput {
+            width: 100%;
+            min-height: 50px;
+            max-height: 120px;
+            padding: 15px 20px;
+            border: 2px solid #dee2e6;
+            border-radius: 25px;
+            font-size: 16px;
+            font-family: inherit;
+            resize: none;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        #userInput:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        #sendButton {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            min-width: 80px;
+        }
+
+        #sendButton:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        #sendButton:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .typing-indicator {
+            display: none;
+            align-self: flex-start;
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-radius: 18px;
+            border-bottom-left-radius: 5px;
+            max-width: 80px;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dots span {
+            width: 8px;
+            height: 8px;
+            background: #667eea;
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .quick-action {
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            color: #667eea;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.2s ease;
+        }
+
+        .quick-action:hover {
+            background: rgba(102, 126, 234, 0.2);
+            transform: translateY(-1px);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-10px);
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .chat-container {
+                height: 95vh;
+            }
+            
+            .message {
+                max-width: 90%;
+            }
+            
+            .input-container {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="header">
+            <h1>🌟 Virtual Therapist AI</h1>
+            <p>Your supportive companion for mental wellness</p>
+        </div>
+
+        <div class="disclaimer" id="disclaimer">
+            <strong>⚠️ Important Disclaimer:</strong> I am an AI assistant, not a licensed therapist or mental health professional. 
+            I'm here to provide supportive conversation and wellness exercises, but I cannot diagnose or treat mental health conditions. 
+            For professional help, please contact a qualified mental health provider. If you're experiencing a crisis, 
+            please contact emergency services or a crisis hotline immediately.
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="message system">
+                Welcome! I'm here to provide a safe space for you to share your thoughts and feelings. 
+                I can offer supportive conversation, guide you through wellness exercises, and help you find resources if needed.
+                How are you feeling today? 💙
+            </div>
+        </div>
+
+        <div class="typing-indicator" id="typingIndicator">
+            <div class="typing-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+
+        <div class="input-container">
+            <div class="input-wrapper">
+                <textarea 
+                    id="userInput" 
+                    placeholder="Share what's on your mind..." 
+                    rows="1"
+                ></textarea>
+                <div class="quick-actions" id="quickActions">
+                    <span class="quick-action" onclick="sendQuickMessage('I\'m feeling anxious')">😰 Feeling anxious</span>
+                    <span class="quick-action" onclick="sendQuickMessage('I need help relaxing')">🧘 Need to relax</span>
+                    <span class="quick-action" onclick="sendQuickMessage('I want resources')">📚 Find resources</span>
+                    <span class="quick-action" onclick="sendQuickMessage('I\'m feeling good today')">😊 Feeling good</span>
+                </div>
+            </div>
+            <button id="sendButton" onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        // Virtual Therapist AI Logic
+        class VirtualTherapistAI {
+            constructor() {
+                this.sessionId = 'user_' + Date.now();
+                this.conversationHistory = [];
+                this.crisisKeywords = [
+                    'suicide', 'kill myself', 'end it all', 'not worth living', 
+                    'want to die', 'better off dead', 'hopeless', 'no way out',
+                    'can\'t go on', 'don\'t want to live', 'end my life',
+                    'hurt myself', 'self harm', 'cutting', 'overdose'
+                ];
+                
+                this.exercises = {
+                    breathing: {
+                        name: '4-7-8 Breathing Exercise',
+                        steps: [
+                            "Let's do a 4-7-8 breathing exercise together 🌬️",
+                            "1. Sit comfortably and close your eyes if you'd like",
+                            "2. Inhale quietly through your nose for 4 seconds",
+                            "3. Hold your breath for 7 seconds", 
+                            "4. Exhale slowly through your mouth for 8 seconds",
+                            "5. Repeat this cycle 3-4 times",
+                            "Take your time and focus only on your breathing. You've got this! 💙"
+                        ]
+                    },
+                    grounding: {
+                        name: '5-4-3-2-1 Grounding Technique',
+                        steps: [
+                            "Let's try the 5-4-3-2-1 grounding technique 🌱",
+                            "This helps you feel more present. Look around and identify:",
+                            "• 5 things you can see 👀",
+                            "• 4 things you can touch ✋",
+                            "• 3 things you can hear 👂",
+                            "• 2 things you can smell 👃",
+                            "• 1 thing you can taste 👅",
+                            "Take your time with each step and really focus on each sensation."
+                        ]
+                    },
+                    gratitude: {
+                        name: 'Three Good Things',
+                        steps: [
+                            "Let's practice gratitude with 'Three Good Things' ✨",
+                            "Think of three things that went well today, no matter how small:",
+                            "1. What was the first good thing?",
+                            "2. What was the second good thing?",
+                            "3. What was the third good thing?",
+                            "For each one, consider why it was meaningful to you.",
+                            "Take a moment to really appreciate these positive moments 💝"
+                        ]
+                    }
+                };
+
+                this.resources = {
+                    crisis: {
+                        US: { name: 'National Suicide Prevention Lifeline', number: '988', website: 'https://988lifeline.org' },
+                        UK: { name: 'Samaritans', number: '116 123', website: 'https://www.samaritans.org' },
+                        CA: { name: 'Talk Suicide Canada', number: '1-833-456-4566', website: 'https://talksuicide.ca' }
+                    },
+                    general: [
+                        { name: 'National Institute of Mental Health', url: 'https://www.nimh.nih.gov' },
+                        { name: 'Mental Health America', url: 'https://www.mhanational.org' },
+                        { name: 'Crisis Text Line', info: 'Text HOME to 741741' }
+                    ]
+                };
+            }
+
+            analyzeSentiment(text) {
+                const lowerText = text.toLowerCase();
+                
+                // Crisis detection
+                if (this.detectCrisis(text)) {
+                    return { sentiment: 'crisis', emotion: 'crisis', confidence: 1.0 };
+                }
+
+                // Emotion keywords
+                const emotions = {
+                    anxiety: ['anxious', 'worried', 'nervous', 'panic', 'overwhelmed', 'stressed', 'tense'],
+                    depression: ['depressed', 'sad', 'empty', 'hopeless', 'worthless', 'lonely', 'down'],
+                    anger: ['angry', 'furious', 'frustrated', 'irritated', 'mad', 'rage', 'annoyed'],
+                    joy: ['happy', 'joyful', 'excited', 'elated', 'cheerful', 'optimistic', 'great'],
+                    calm: ['peaceful', 'relaxed', 'serene', 'tranquil', 'content', 'okay', 'fine']
+                };
+
+                // Simple sentiment scoring
+                const positiveWords = ['good', 'great', 'happy', 'love', 'excellent', 'amazing', 'wonderful', 'better', 'fine', 'okay'];
+                const negativeWords = ['bad', 'terrible', 'hate', 'awful', 'horrible', 'sad', 'angry', 'stressed', 'anxious', 'worried'];
+
+                let positiveScore = 0;
+                let negativeScore = 0;
+                let detectedEmotion = 'neutral';
+
+                // Count positive/negative words
+                positiveWords.forEach(word => {
+                    if (lowerText.includes(word)) positiveScore++;
+                });
+                
+                negativeWords.forEach(word => {
+                    if (lowerText.includes(word)) negativeScore++;
+                });
+
+                // Detect specific emotions
+                for (const [emotion, keywords] of Object.entries(emotions)) {
+                    for (const keyword of keywords) {
+                        if (lowerText.includes(keyword)) {
+                            detectedEmotion = emotion;
+                            break;
+                        }
+                    }
+                    if (detectedEmotion !== 'neutral') break;
+                }
+
+                // Determine overall sentiment
+                let sentiment = 'neutral';
+                if (positiveScore > negativeScore) {
+                    sentiment = 'positive';
+                } else if (negativeScore > positiveScore) {
+                    sentiment = 'negative';
+                }
+
+                return { sentiment, emotion: detectedEmotion, confidence: 0.8 };
+            }
+
+            detectCrisis(text) {
+                const lowerText = text.toLowerCase();
+                return this.crisisKeywords.some(keyword => lowerText.includes(keyword));
+            }
+
+            generateResponse(userInput) {
+                const analysis = this.analyzeSentiment(userInput);
+                this.conversationHistory.push({ user: userInput, analysis });
+
+                if (analysis.sentiment === 'crisis') {
+                    return this.handleCrisis();
+                }
+
+                // Intent recognition
+                const lowerInput = userInput.toLowerCase();
+                
+                if (this.matchesIntent(lowerInput, ['help me relax', 'breathing', 'exercise', 'calm down', 'need to relax'])) {
+                    return this.provideExercise(analysis.emotion);
+                }
+                
+                if (this.matchesIntent(lowerInput, ['resources', 'help', 'professional', 'therapist', 'counselor'])) {
+                    return this.provideResources();
+                }
+
+                // Generate empathetic response based on sentiment
+                return this.generateEmpathetic Response(analysis);
+            }
+
+            matchesIntent(text, keywords) {
+                return keywords.some(keyword => text.includes(keyword));
+            }
+
+            handleCrisis() {
+                const resource = this.resources.crisis.US; // Default to US
+                return {
+                    text: `I'm here to support you, but it sounds like you're in a lot of pain right now. Please reach out to someone you trust or contact a crisis hotline immediately:\n\n🆘 ${resource.name}: ${resource.number}\n🌐 Website: ${resource.website}\n\nYou're not alone, and help is available. Your life has value and meaning. 💙`,
+                    type: 'crisis',
+                    exercise: null
+                };
+            }
+
+            provideExercise(emotion) {
+                let exercise = this.exercises.breathing; // Default
+                
+                if (emotion === 'anxiety') {
+                    exercise = this.exercises.breathing;
+                } else if (emotion === 'depression') {
+                    exercise = this.exercises.gratitude;
+                } else if (['overwhelmed', 'panic'].includes(emotion)) {
+                    exercise = this.exercises.grounding;
+                }
+
+                return {
+                    text: "I'd be happy to guide you through an exercise that might help. 🌟",
+                    type: 'exercise',
+                    exercise: exercise
+                };
+            }
+
+            provideResources() {
+                const resourceText = `Here are some helpful mental health resources:\n\n📞 Crisis Support:\n• National Suicide Prevention Lifeline: 988\n• Crisis Text Line: Text HOME to 741741\n\n🌐 General Resources:\n• National Institute of Mental Health: https://www.nimh.nih.gov\n• Mental Health America: https://www.mhanational.org\n\nRemember, seeking professional help is a sign of strength, not weakness. 💪`;
+                
+                return {
+                    text: resourceText,
+                    type: 'resources',
+                    exercise: null
+                };
+            }
+
+           generateEmpatheticResponse(analysis) {
+                const responses = {
+                    positive: [
+                        "I'm so glad to hear you're feeling good! That's wonderful. 😊 What's been contributing to these positive feelings?",
+                        "It sounds like you're in a good space right now. That's really great to hear! ✨",
+                        "I can sense the positivity in your message. Would you like to explore what's been working well for you? 🌟"
+                    ],
+                    neutral: [
+                        "Thanks for sharing that with me. How can I best support you today? 💙",
+                        "I hear you. Is there anything specific you'd like to talk about or work on? 🤗",
+                        "I'm here to listen. What's on your mind today? 💭"
+                    ],
+                    negative: [
+                        `I'm sorry to hear you're feeling ${analysis.emotion}. That sounds really difficult. I'm here to support you. 💙`,
+                        "It takes courage to share when you're struggling. Thank you for trusting me with this. 🤗",
+                        "I can hear that you're going through a tough time. You're not alone in this. 💝"
+                    ]
+                };
+
+                const responseList = responses[analysis.sentiment] || responses.neutral;
+                const response = responseList[Math.floor(Math.random() * responseList.length)];
+                
+                let followUp = "";
+                if (analysis.sentiment === 'negative') {
+                    followUp = "\n\nWould you like to try a quick exercise to help you feel a bit better, or would you prefer to talk more about what's going on?";
+                }
+
+                return {
+                    text: response + followUp,
+                    type: 'empathetic',
+                    exercise: null
+                };
+            }
+        }
+
+        // Initialize the AI
+        const therapistAI = new VirtualTherapistAI();
+        let messageCount = 0;
+
+        // DOM elements
+        const chatMessages = document.getElementById('chatMessages');
+        const userInput = document.getElementById('userInput');
+        const sendButton = document.getElementById('sendButton');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const disclaimer = document.getElementById('disclaimer');
+        const quickActions = document.getElementById('quickActions');
+
+        // Show disclaimer after first message
+        function showDisclaimer() {
+            if (messageCount === 1) {
+                disclaimer.classList.add('show');
+            }
+        }
+
+        // Auto-resize textarea
+        userInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+
+        // Send message on Enter (but allow Shift+Enter for new lines)
+        userInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        function addMessage(text, isUser = false, type = 'normal', exercise = null) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'agent'}`;
+            
+            if (type === 'crisis') {
+                messageDiv.classList.add('crisis');
+            }
+            
+            // Handle line breaks
+            const formattedText = text.replace(/\n/g, '<br>');
+            messageDiv.innerHTML = formattedText;
+            
+            // Add exercise if provided
+            if (exercise) {
+                const exerciseDiv = document.createElement('div');
+                exerciseDiv.className = 'exercise-container';
+                exerciseDiv.innerHTML = `
+                    <div class="exercise-title">${exercise.name}</div>
+                    <div class="exercise-steps">${exercise.steps.join('<br>')}</div>
+                `;
+                messageDiv.appendChild(exerciseDiv);
+            }
+            
+            chatMessages.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        function showTyping() {
+            typingIndicator.style.display = 'block';
+            scrollToBottom();
+        }
+
+        function hideTyping() {
+            typingIndicator.style.display = 'none';
+        }
+
+        function scrollToBottom() {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function sendMessage() {
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            // Add user message
+            addMessage(message, true);
+            messageCount++;
+            showDisclaimer();
+
+            // Clear input
+            userInput.value = '';
+            userInput.style.height = 'auto';
+
+            // Show typing indicator
+            showTyping();
+            sendButton.disabled = true;
+
+            // Hide quick actions after first message
+            if (messageCount === 1) {
+                quickActions.style.display = 'none';
+            }
+
+            // Simulate AI processing delay
+            setTimeout(() => {
+                const response = therapistAI.generateResponse(message);
+                hideTyping();
+                addMessage(response.text, false, response.type, response.exercise);
+                sendButton.disabled = false;
+                userInput.focus();
+            }, 1500 + Math.random() * 1000); // 1.5-2.5 second delay
+        }
+
+        function sendQuickMessage(message) {
+            userInput.value = message;
+            sendMessage();
+        }
+
+        // Focus on input when page loads
+        window.addEventListener('load', () => {
+            userInput.focus();
+        });
+    </script>
+</body>
+</html>
